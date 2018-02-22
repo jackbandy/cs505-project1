@@ -9,7 +9,8 @@ Currently, just a terminal
 '''
 
 import random
-
+import csv
+from numpy import genfromtxt, savetxt, append, array
 
 # constants
 command_strings = ["GRANT", "FORBID"]
@@ -69,6 +70,7 @@ def parseCommandString(command):
         return
 
     #TODO verify table exists
+    
 
     if command_args[2] != "TO":
         print("Unable to parse your command")
@@ -93,9 +95,16 @@ def parseCommandString(command):
 
 def executeCommand(action, table, user):
     if action=="GRANT":
-        # check the forbidden table
-        # give an error if forbidden
-        print("You are performing a grant, which is not yet implemented")
+        if isForbidden(table, user):
+            # give error
+            print("grant of acces to \'{}\' by \'{}\' unacceptable".format(
+                table, user))
+        else:
+            addAssignment(table, user)
+            print("Added assignment")
+            # add the assignment to the table
+
+
 
     elif action=="FORBID":
         # make sure it's the security officer
@@ -107,12 +116,29 @@ def executeCommand(action, table, user):
 
 
 def isForbidden(table, user):
-    pass
+    # load forbidden table
+    # check if an entry exists for table,user
+    forbidden = genfromtxt('forbidden.csv', delimiter=',', dtype=str, skip_header=True)
+    for u,t in forbidden:
+        if t==table and u==user:
+            # the entry is forbidden
+            return True
+
+    return False
 
 
 
 def isAssigned(table, user):
     pass
+
+
+
+def addAssignment(table, user):
+    assigned = genfromtxt('assigned.csv', delimiter=',', dtype=str, skip_header=True)
+    string_to_append = '\n{},{},1'.format(user,table)
+    with open('assigned.csv', 'a') as assignments:
+        assignments.write(string_to_append)
+
 
 
 
