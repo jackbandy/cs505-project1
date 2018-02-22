@@ -1,3 +1,9 @@
+#! /bin/sh
+""":"
+exec python $0 ${1+"$@"}
+"""
+
+
 '''
 Currently, just a terminal
 '''
@@ -54,7 +60,7 @@ def inputLoop(user="", officer=False):
 
 
 def parseCommandString(command):
-    # ex. "GRANT ON employees TO dexter"
+    # ex. "GRANT employees TO dexter"
     command_args = command.split()
 
     if command_args[0] not in command_strings:
@@ -62,14 +68,10 @@ def parseCommandString(command):
         printHelp()
         return
 
-    if command_args[1] != "ON":
-        print("Unable to parse your command")
-        printHelp()
-        return
 
     #TODO verify table exists
 
-    if command_args[3] != "TO":
+    if command_args[2] != "TO":
         print("Unable to parse your command")
         printHelp()
         return
@@ -77,13 +79,13 @@ def parseCommandString(command):
     #TODO verify user exists
 
     confirmed = verifyCommand(action=command_args[0],
-            table=command_args[2],
-            user=command_args[4])
+            table=command_args[1],
+            user=command_args[3])
 
     if confirmed:
         executeCommand(action=command_args[0],
-            table=command_args[2],
-            user=command_args[4])
+            table=command_args[1],
+            user=command_args[3])
     else:
         print("Cancelled!")
 
@@ -120,7 +122,7 @@ def verifyCommand(action, table, user):
 def printHelp():
     print("Valid commands: {}".format(command_strings))
     random_command = random.choice(command_strings)
-    print("Example: {} ON table1 TO user1".format(
+    print("Example: {} table1 TO user1".format(
         random_command))
 
 
