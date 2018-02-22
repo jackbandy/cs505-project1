@@ -7,7 +7,6 @@ import random
 
 # constants
 command_strings = ["GRANT", "FORBID"]
-privilege_strings = ["INSERT", "SELECT", "UPDATE", "DELETE"]
 valid_users = ["jack", "seif"]
 
 
@@ -55,7 +54,7 @@ def inputLoop(user="", officer=False):
 
 
 def parseCommandString(command):
-    # ex. "GRANT SELECT ON employees TO dexter"
+    # ex. "GRANT ON employees TO dexter"
     command_args = command.split()
 
     if command_args[0] not in command_strings:
@@ -63,20 +62,14 @@ def parseCommandString(command):
         printHelp()
         return
 
-    if command_args[1] not in privilege_strings:
+    if command_args[1] != "ON":
         print("Unable to parse your command")
         printHelp()
-        return
-
-    if command_args[2] != "ON":
-        print("Unable to parse your command")
-        printHelp()
-        print("NOTE you may only add on privilege at a time")
         return
 
     #TODO verify table exists
 
-    if command_args[4] != "TO":
+    if command_args[3] != "TO":
         print("Unable to parse your command")
         printHelp()
         return
@@ -84,37 +77,35 @@ def parseCommandString(command):
     #TODO verify user exists
 
     confirmed = verifyCommand(action=command_args[0],
-            privilege=command_args[1],
-            table=command_args[3],
-            user=command_args[5])
+            table=command_args[2],
+            user=command_args[4])
 
     if confirmed:
         executeCommand(action=command_args[0],
-            privilege=command_args[1],
-            table=command_args[3],
-            user=command_args[5])
+            table=command_args[2],
+            user=command_args[4])
     else:
         print("Cancelled!")
 
 
 
 
-def executeCommand(action, privilege, table, user):
+def executeCommand(action, table, user):
     if action=="GRANT":
-        print("You are performing a grant, which is not yet implemented"
+        print("You are performing a grant, which is not yet implemented")
     elif action=="FORBID":
-        print("You are performing a revoke, which is not yet implemented"
+        print("You are performing a revoke, which is not yet implemented")
 
 
 
 
-def verifyCommand(action, privilege, table, user):
+def verifyCommand(action, table, user):
     if action=="GRANT":
-        print("Are you sure you want to give \'{}\' the ability to {} the \'{}\' table?".format(
-            user, privilege, table))
+        print("Are you sure you want to give \'{}\' access to the \'{}\' table?".format(
+            user, table))
     elif action=="FORBID":
-        print("Are you sure you want to forbid \'{}\' from performing {} on the \'{}\' table?".format(
-            user, privilege, table))
+        print("Are you sure you want to forbid \'{}\' access to the \'{}\' table?".format(
+            user, table))
 
     while True:
         conf = input("YES or NO: ")
@@ -128,11 +119,9 @@ def verifyCommand(action, privilege, table, user):
 
 def printHelp():
     print("Valid commands: {}".format(command_strings))
-    print("Valid privileges: {}".format(privilege_strings))
     random_command = random.choice(command_strings)
-    random_privilege = random.choice(privilege_strings)
-    print("Example: {} {} ON table1 TO user1".format(
-        random_command, random_privilege))
+    print("Example: {} ON table1 TO user1".format(
+        random_command))
 
 
 
