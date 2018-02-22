@@ -68,7 +68,6 @@ def parseCommandString(command):
         printHelp()
         return
 
-
     #TODO verify table exists
 
     if command_args[2] != "TO":
@@ -94,10 +93,26 @@ def parseCommandString(command):
 
 def executeCommand(action, table, user):
     if action=="GRANT":
+        # check the forbidden table
+        # give an error if forbidden
         print("You are performing a grant, which is not yet implemented")
+
     elif action=="FORBID":
+        # make sure it's the security officer
+        # check the assigned table
+        # potentially overwrite assigned table
+        # warn the user if it will disrupt anything
         print("You are performing a revoke, which is not yet implemented")
 
+
+
+def isForbidden(table, user):
+    pass
+
+
+
+def isAssigned(table, user):
+    pass
 
 
 
