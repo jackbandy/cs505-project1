@@ -10,7 +10,9 @@ Currently, just a terminal
 
 import random
 import csv
-from numpy import genfromtxt, savetxt, append, array
+import time
+from numpy import genfromtxt, savetxt
+
 
 # constants
 command_strings = ["GRANT", "FORBID"]
@@ -156,6 +158,23 @@ def verifyCommand(action, table, user):
             return True 
         if conf == "NO":
             return False
+
+
+
+
+def logAction(actor, action, table, user):
+    string_to_append ="{} {} performed {} on {} to {}\n".format(
+            time.ctime(time.time()), actor, action, table, user)
+    with open('log.txt', 'a') as logfile:
+        logfile.write(string_to_append)
+
+
+
+def logError(actor, action, table, user):
+    string_to_append ="{} {} attempted {} on {} to {}\n".format(
+            time.ctime(time.time()), actor, action, table, user)
+    with open('log.txt', 'a') as logfile:
+        logfile.write(string_to_append)
 
 
 
