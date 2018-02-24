@@ -5,19 +5,18 @@ exec python $0 ${1+"$@"}
 
 
 '''
-Currently, just a terminal
+A terminal for interacting with the privileges
+Handles login/authentication and input parsing
 '''
 
 import random
-import csv
 import time
+import operations
 from numpy import genfromtxt, savetxt
 
 
 # constants
 command_strings = ["GRANT", "FORBID"]
-valid_users = ["jack", "seif"]
-
 
 
 def main():
@@ -31,38 +30,34 @@ def authenticate():
     authenticated = False
 
     while not authenticated:
-        officer = False
         uname = input("username: ")
         if len(uname) == 0:
             break
         else:
             print("Authenticating...")
-            if uname == 'securityofficer':
-                authenticated = True
-                officer = True
-            elif uname in valid_users:
+            if operations.isValidUser(uname):
                 authenticated = True
             else:
                 print("Authentication failed")
     print("Welcome, {}!\n".format(uname))
 
-    inputLoop(user=uname, officer=officer)
+    inputLoop(actor=uname)
 
 
 
-def inputLoop(user="", officer=False):
+def inputLoop(actor):
     while True:
-        response = input("{}> ".format(user))
+        response = input("{}> ".format(actor))
         if len(response) == 0:
-            break
+            continue 
         elif response == 'exit':
             exit()
         else:
-            parseCommandString(response)
+            parseCommandString(command=response, actor=actor)
 
 
 
-def parseCommandString(command):
+def parseCommandString(command, actor):
     # ex. "GRANT employees TO dexter"
     command_args = command.split()
 
@@ -88,58 +83,12 @@ def parseCommandString(command):
     if confirmed:
         executeCommand(action=command_args[0],
             table=command_args[1],
-            user=command_args[3])
+            user=command_args[3],
+            actor=actor)
     else:
         print("Cancelled!")
 
 
-
-
-def executeCommand(action, table, user):
-    if action=="GRANT":
-        if isForbidden(table, user):
-            # give error
-            print("grant of acces to \'{}\' by \'{}\' unacceptable".format(
-                table, user))
-        else:
-            addAssignment(table, user)
-            print("Added assignment")
-            # add the assignment to the table
-
-
-
-    elif action=="FORBID":
-        # make sure it's the security officer
-        # check the assigned table
-        # potentially overwrite assigned table
-        # warn the user if it will disrupt anything
-        print("You are performing a revoke, which is not yet implemented")
-
-
-
-def isForbidden(table, user):
-    # load forbidden table
-    # check if an entry exists for table,user
-    forbidden = genfromtxt('forbidden.csv', delimiter=',', dtype=str, skip_header=True)
-    for u,t in forbidden:
-        if t==table and u==user:
-            # the entry is forbidden
-            return True
-
-    return False
-
-
-
-def isAssigned(table, user):
-    pass
-
-
-
-def addAssignment(table, user):
-    assigned = genfromtxt('assigned.csv', delimiter=',', dtype=str, skip_header=True)
-    string_to_append = '\n{},{},1'.format(user,table)
-    with open('assigned.csv', 'a') as assignments:
-        assignments.write(string_to_append)
 
 
 
@@ -162,19 +111,7 @@ def verifyCommand(action, table, user):
 
 
 
-def logAction(actor, action, table, user):
-    string_to_append ="{} {} performed {} on {} to {}\n".format(
-            time.ctime(time.time()), actor, action, table, user)
-    with open('log.txt', 'a') as logfile:
-        logfile.write(string_to_append)
 
-
-
-def logError(actor, action, table, user):
-    string_to_append ="{} {} attempted {} on {} to {}\n".format(
-            time.ctime(time.time()), actor, action, table, user)
-    with open('log.txt', 'a') as logfile:
-        logfile.write(string_to_append)
 
 
 
