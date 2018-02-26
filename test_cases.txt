@@ -1,0 +1,2 @@
+(login with jack)
+input: GRANT design TO seif WITH GRANT OPTION, expected output: Added assignment
