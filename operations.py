@@ -4,8 +4,13 @@ The underbelly of the project
 '''
 
 from numpy import genfromtxt, savetxt
+import pickle
 import time
 
+
+ASSIGNED_FILE_NAME = 'assigned.csv'
+FORBIDDEN_FILE_NAME = 'forbidden.csv'
+USERS_FILE_NAME = 'users.csv'
 
 def executeCommand(action, table, user, actor, grant_option=0):
     '''
@@ -26,6 +31,10 @@ def executeCommand(action, table, user, actor, grant_option=0):
         if not isAssignedWithGrantOption(table=table, user=actor):
             print("sorry {}, you do not have privileges to add assignments on table \'{}\'".format(actor, table))
             logError(actor=actor, action='GRANT', table=table, user=user)
+        if isAssigned(table=table, user=user):
+            # if the assignment already exists, just log it
+            logAction(actor=actor, action=action, table=table, user=user)
+            print("Assignment already exists")
         else:
             addAssignment(table=table, user=user, actor=actor,
                     grant_option=grant_option)
@@ -47,10 +56,13 @@ def privilegedExecuteCommand(action, table, user, actor, grant_option=0):
 
     if action=="GRANT":
         if isForbidden(table, user):
-            #TODO check for override instead of just giving error
-            print("sorry {}, grant of acces to \'{}\' by \'{}\' unacceptable".format(
-                actor, table, user))
-            return False
+            if confirmOverwrite(action,table,user):
+                addForbid(actor=actor, table=table, user=user)
+                print("Overwrite confirmed!")
+                print("Affected users will be notified!")
+                return True
+            else:
+                return False
         else:
             addAssignment(table=table, user=user, actor=actor,
                     grant_option=grant_option)
@@ -64,14 +76,38 @@ def privilegedExecuteCommand(action, table, user, actor, grant_option=0):
             print("Hey, {}! You are not a security officer!".format(actor))
             logError(actor=actor, action=action, table=table, user=user)
             return False
+        elif isForbidden(table, user): # do not add a duplicate rule
+            print("User \'{}\' is already forbidden access to table \'{}\'".format(
+                        user, table))
+            return False
         else:
-            #TODO implement the following:
             # check the assigned table
-            # potentially overwrite assigned table
-            # warn the user if it will disrupt anything
-            pass
+            if isAssigned(table, user):
+                if confirmOverwrite(action,table,user):
+                    addForbid(actor=actor, table=table, user=user)
+                    print("Overwrite confirmed!")
+                    print("Affected users will be notified!")
+                    pass
+                else:
+                    print("Overwrite cancelled!")
+            else:
+                addForbid(actor=actor, table=table, user=user)
+                print("Forbidden!")
 
     return True
+
+
+
+def confirmOverwrite(action, table, user):
+    print("Are you ABSOLUTELY sure you want to {} access to the \'{}\' table by \'{}\'?".format(
+                action, table, user))
+    print("This conflicts with existing privileges!")
+    while True:
+        conf = input("YES or NO: ")
+        if conf == "YES" or conf == "yes":
+            return True
+        else:
+            return False
 
 
 
@@ -80,7 +116,7 @@ def isForbidden(table, user):
     A simple utility function to tell if a user is forbidden access to a table
     Returns true if forbidden, false if the entry does not exist
     '''
-    forbidden = genfromtxt('forbidden.csv', delimiter=',', dtype=str, skip_header=True)
+    forbidden = genfromtxt(FORBIDDEN_FILE_NAME, delimiter=',', dtype=str, skip_header=True)
     for u,t in forbidden:
         # check if an entry exists for table,user
         if t==table and u==user:
@@ -95,7 +131,7 @@ def isValidUser(user):
     '''
     Utility function to tell if a username is in the list of valid users
     '''
-    user_table = genfromtxt('users.csv', dtype=str,delimiter=',',skip_header=True)
+    user_table = genfromtxt(USERS_FILE_NAME, dtype=str,delimiter=',',skip_header=True)
     usernames = user_table[:,0]
     if user in usernames:
         return True
@@ -108,7 +144,7 @@ def isSecurityOfficer(user):
     '''
     Utility function to tell if a username has security officer rights
     '''
-    user_table = genfromtxt('users.csv', dtype=str,delimiter=',',skip_header=True)
+    user_table = genfromtxt(USERS_FILE_NAME, dtype=str,delimiter=',',skip_header=True)
     for name, officer in user_table:
         if name == user:
             if officer == '1':
@@ -122,7 +158,7 @@ def isAssigned(table, user):
     '''
     Check if a user has been assigned rights to a given table
     '''
-    assigned = genfromtxt('assigned.csv', delimiter=',', dtype=str, skip_header=True)
+    assigned = genfromtxt(ASSIGNED_FILE_NAME, delimiter=',', dtype=str, skip_header=True)
     for u,t,g in assigned:
         # check if an entry exists for table,user
         if t==table and u==user:
@@ -135,7 +171,7 @@ def isAssignedWithGrantOption(table, user):
     '''
     Check if a user has rights to assign other users to a given table
     '''
-    assigned = genfromtxt('assigned.csv', delimiter=',', dtype=str, skip_header=True)
+    assigned = genfromtxt(ASSIGNED_FILE_NAME, delimiter=',', dtype=str, skip_header=True)
     for u,t,g in assigned:
         # check if an entry exists for table,user
         if t==table and u==user and g=='1':
@@ -150,10 +186,21 @@ def addAssignment(table, user, actor, grant_option=0):
     Add an assignment to the assigned table
     '''
     string_to_append = '\n{},{},{}'.format(user,table,grant_option)
-    with open('assigned.csv', 'a') as assignments:
+    with open(ASSIGNED_FILE_NAME, 'a') as assignments:
         assignments.write(string_to_append)
     logAction(actor=actor, action='GRANT', table=table, user=user,
             grant_option=grant_option)
+
+
+
+def addForbid(table, user, actor):
+    '''
+    Add an entry to the forbidden table
+    '''
+    string_to_append = '\n{},{}'.format(user,table)
+    with open(FORBIDDEN_FILE_NAME, 'a') as forbidden:
+        forbidden.write(string_to_append)
+    logAction(actor=actor, action='FORBID', table=table, user=user)
 
 
 
