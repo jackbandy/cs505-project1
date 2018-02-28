@@ -3,7 +3,7 @@ operations.py
 The underbelly of the project
 '''
 
-from numpy import genfromtxt, savetxt
+from numpy import genfromtxt, savetxt, delete
 import pickle
 import time
 
@@ -31,15 +31,21 @@ def executeCommand(action, table, user, actor, grant_option=0):
         if not isAssignedWithGrantOption(table=table, user=actor):
             print("sorry {}, you do not have privileges to add assignments on table \'{}\'".format(actor, table))
             logError(actor=actor, action='GRANT', table=table, user=user)
-        if isAssigned(table=table, user=user):
-            # if the assignment already exists, just log it
+        elif isAssignedWithGrantOption(table=table, user=user):
+            # if no privilege will be gained by new assignment, just log it
             logAction(actor=actor, action=action, table=table, user=user)
             print("Assignment already exists")
-        else:
+        elif isAssigned(table=table,user=user):
+            # add the assignment but overwrite the previous one
+            removeAssignment(user=user,table=table)
             addAssignment(table=table, user=user, actor=actor,
                     grant_option=grant_option)
             print("Added assignment")
-            # add the assignment to the table
+        else:
+            # no assignment exists, simply add the row
+            addAssignment(table=table, user=user, actor=actor,
+                    grant_option=grant_option)
+            print("Added assignment")
 
     elif action=="FORBID":
         print("Hey, {}! You are not a security officer!".format(actor))
@@ -57,17 +63,30 @@ def privilegedExecuteCommand(action, table, user, actor, grant_option=0):
     if action=="GRANT":
         if isForbidden(table, user):
             if confirmOverwrite(action,table,user):
-                addForbid(actor=actor, table=table, user=user)
+                removeForbid(table=table, user=user)
+                addAssignment(actor=actor, table=table, user=user,
+                        grant_option=grant_option)
                 print("Overwrite confirmed!")
                 print("Affected users will be notified!")
                 return True
             else:
                 return False
+        elif isAssignedWithGrantOption(table=table, user=user):
+            # if no privilege will be gained by new assignment, just log it
+            logAction(actor=actor, action=action, table=table, user=user)
+            print("Assignment already exists")
+        elif isAssigned(table=table,user=user):
+            # the user is assigned, but without grant option
+            # so delete the old assignment first
+            removeAssignment(user=user,table=table)
+            addAssignment(actor=actor, table=table, user=user,
+                    grant_option=grant_option)
+
         else:
+            # no assignment exists, simply add the row
             addAssignment(table=table, user=user, actor=actor,
                     grant_option=grant_option)
             print("Added assignment")
-            # add the assignment to the table
 
 
     elif action=="FORBID":
@@ -181,6 +200,40 @@ def isAssignedWithGrantOption(table, user):
 
 
 
+def removeAssignment(table, user):
+    '''
+    Remove assignment entry for a given table/user pair
+    '''
+    assigned = genfromtxt(ASSIGNED_FILE_NAME, delimiter=',', dtype=str, skip_header=True)
+    new_assigned = assigned
+    for i in range(assigned.shape[0]):
+        # check if an entry exists for table,user
+        u,t,g = assigned[i]
+        print("Checking {}, {}".format(u,t))
+        if t==table and u==user:
+            print("Deleting!")
+            new_assigned = delete(assigned, i, axis=0)
+            break # only one entry should exist, so break the loop once found
+    savetxt(ASSIGNED_FILE_NAME, new_assigned, header='user,table,grantopt',fmt='%s', delimiter=',')
+
+
+
+def removeForbid(table, user):
+    '''
+    Remove forbidden entry for a given table/user pair
+    '''
+    forbidden = genfromtxt(FORBIDDEN_FILE_NAME, delimiter=',', dtype=str, skip_header=True)
+    new_forbidden = forbidden
+    for i in range(len(forbidden)):
+        # check if an entry exists for table,user
+        u,t = forbidden[i]
+        if t==table and u==user:
+            new_forbidden = delete(forbidden, i, axis=0)
+            break # only one entry should exist, so break the loop once found
+    savetxt(FORBIDDEN_FILE_NAME, new_forbidden, header='user,table',fmt='%s', delimiter=',')
+
+
+
 def addAssignment(table, user, actor, grant_option=0):
     '''
     Add an assignment to the assigned table
@@ -196,7 +249,9 @@ def addAssignment(table, user, actor, grant_option=0):
 def addForbid(table, user, actor):
     '''
     Add an entry to the forbidden table
+    AND purge the assigned table of the entry
     '''
+    removeAssignment(table, user)
     string_to_append = '\n{},{}'.format(user,table)
     with open(FORBIDDEN_FILE_NAME, 'a') as forbidden:
         forbidden.write(string_to_append)
